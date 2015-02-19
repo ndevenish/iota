@@ -36,8 +36,8 @@ class Capturing(list):
 
 
 def integrate_one_image(mp_entry, log_dir, gs_params):
-    """ Indexes and integrates a single image by running run_one_index from the 
-      xfel.cxi.display_spots module.
+    """ Indexes and integrates a single image by running run_one_index from the
+    xfel.cxi.display_spots module.
 
   Output:
   1. integrated pickle in correct output folder
@@ -47,11 +47,10 @@ def integrate_one_image(mp_entry, log_dir, gs_params):
   Parameters:
   1. mp_entry: raw integration image in *.pickle format
   2. log_dir: main folder for logs
-  3. gs_params: PHIL object containing grid-search and other parameters (from 
+  3. gs_params: PHIL object containing grid-search and other parameters (from
                 user input file)
   """
-    from xfel.phil_preferences import load_cxi_phil
-    from xfel.cxi.display_spots import run_one_index_core
+
     from xfel.cxi.display_spots import run_one_index
 
     current_img = mp_entry[0]
@@ -154,7 +153,7 @@ def integrate_one_image(mp_entry, log_dir, gs_params):
         for item in index_log:
             index_logfile.write("{}\n".format(item))
 
-        index_logfile.write("{}\n\n".format(grid_search_output))
+        index_logfile.write("\n{}\n\n".format(grid_search_output))
 
 
 # Indexing and integration w/ grid search of spotfinding parameters
@@ -169,7 +168,7 @@ def index_integrate(mp_entry, log_dir, gs_params):
   Parameters:
   1. mp_entry: raw integration image in *.pickle format
   2. log_dir: main folder for logs
-  3. gs_params: PHIL object containing grid-search and other parameters (from 
+  3. gs_params: PHIL object containing grid-search and other parameters (from
                 user input file)
   """
 
