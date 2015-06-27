@@ -3,7 +3,7 @@ from __future__ import division
 """
 Author      : Lyubimov, A.Y.
 Created     : 10/10/2014
-Last Changed: 06/24/2015
+Last Changed: 06/26/2015
 Description : Runs cctbx.xfel integration module either in grid-search or final
               integration mode. Has options to output diagnostic visualizations
 """
@@ -220,7 +220,6 @@ def integrate_image(mp_entry, current_log_file, arguments, ptitle, gs_params):
                 "strong": strong_spots,
                 "res": res,
                 "mos": mosaicity,
-                "mq": mos_quality,
             }
 
             p_cell = (
@@ -285,7 +284,7 @@ def integration(int_type, mp_entry, log_dir, gs_params):
       output: results file in CSV format and (optional) integration pickle
   """
 
-    logfile = "{}/iota.log".format(os.curdir)
+    logfile = os.path.abspath(gs_params.logfile)
 
     current_img = mp_entry[0]
     current_output_dir = mp_entry[1]
@@ -355,7 +354,6 @@ def integration(int_type, mp_entry, log_dir, gs_params):
                         "strong",
                         "res",
                         "mos",
-                        "mq",
                     ]
                     writer = csv.DictWriter(res_file, fieldnames=fn)
                     writer.writerow(results)
@@ -376,7 +374,6 @@ def integration(int_type, mp_entry, log_dir, gs_params):
                         "strong",
                         "res",
                         "mos",
-                        "mq",
                     ]
                     writer = csv.DictWriter(res_file, fieldnames=fn)
                     writer.writeheader()
