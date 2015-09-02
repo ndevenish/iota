@@ -249,6 +249,7 @@ class Selector(object):
         self.final = final
         self.best = final
         self.fail = None
+        self.select_by = select_by
 
     def prefilter(self):
         """ Unit cell pre-filter. Applies hard space-group constraint and stringent
