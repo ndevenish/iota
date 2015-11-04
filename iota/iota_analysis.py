@@ -169,6 +169,8 @@ class Analyzer(object):
             counter = 1
 
             # run hierarchical clustering analysis
+            print self.pickles
+            exit()
             ucs = Cluster.from_files(self.pickles, use_b=True)
             clusters, _ = ucs.ab_cluster(
                 cluster_threshold,
@@ -177,7 +179,6 @@ class Analyzer(object):
                 schnell=False,
                 doplot=False,
             )
-
             uc_table.append("\n\n{:-^80}\n" "".format(" UNIT CELL ANALYSIS "))
 
             # extract clustering info and add to summary output list

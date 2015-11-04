@@ -263,7 +263,8 @@ class InitAll(object):
             try:
                 int_folder = os.path.abspath(
                     os.path.join(
-                        os.curdir, "integration/{}/grid_search".format(analysis_source)
+                        os.curdir,
+                        "integration/{}/image_objects".format(analysis_source),
                     )
                 )
             except ValueError:
@@ -363,7 +364,7 @@ class InitAll(object):
             misc.iota_exit(self.iver)
 
         if self.args.analyze != None:
-            self.analyze_prior_results(self.args.analyze)
+            self.analyze_prior_results("{:003d}".format(int(self.args.analyze)))
             misc.iota_exit(self.iver)
 
         if self.params.mp_method == "mpi":
