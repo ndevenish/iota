@@ -3,7 +3,7 @@ from __future__ import division
 '''
 Author      : Lyubimov, A.Y.
 Created     : 10/12/2014
-Last Changed: 01/20/2015
+Last Changed: 04/13/2015
 Description : Reads command line arguments. Initializes all IOTA starting
               parameters. Starts main log.
 '''
@@ -13,16 +13,16 @@ import sys
 import argparse
 from datetime import datetime
 
-import prime.iota.iota_input as inp
-import prime.iota.iota_cmd as cmd
-import prime.iota.iota_misc as misc
+import iota.components.iota_input as inp
+import iota.components.iota_cmd as cmd
+import iota.components.iota_misc as misc
 
 # --------------------------- Initialize IOTA -------------------------------- #
 
 
 def parse_command_args(iver, help_message):
   """ Parses command line arguments (only options for now) """
-  parser = argparse.ArgumentParser(prog = 'prime.iota',
+  parser = argparse.ArgumentParser(prog = 'iota.run',
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=(help_message),
             epilog=('\n{:-^70}\n'.format('')))
@@ -64,13 +64,13 @@ class InitAll(object):
     self.iver = iver
     self.now = "{:%A, %b %d, %Y. %I:%M %p}".format(datetime.now())
     self.logo = "\n\n"\
-   "     IIIIII            OOOOOOO        TTTTTTTTTT          A              \n"\
-   "       II             O       O           TT             A A             \n"\
-   "       II             O       O           TT            A   A            \n"\
-   ">------INTEGRATION----OPTIMIZATION--------TRIAGE-------ANALYSIS--------->\n"\
-   "       II             O       O           TT          A       A          \n"\
-   "       II             O       O           TT         A         A         \n"\
-   "     IIIIII            OOOOOOO            TT        A           A   v{}  \n"\
+   "     IIIIII            OOOOOOO        TTTTTTTTTT          A                 \n"\
+   "       II             O       O           TT             A A                \n"\
+   "       II             O       O           TT            A   A               \n"\
+   ">------INTEGRATION----OPTIMIZATION--------TRIAGE-------ANALYSIS------------>\n"\
+   "       II             O       O           TT          A       A             \n"\
+   "       II             O       O           TT         A         A            \n"\
+   "     IIIIII            OOOOOOO            TT        A           A  v{}      \n"\
    "".format(iver)
     self.help_message = self.logo + help_message
     self.input_base = None
@@ -188,7 +188,7 @@ class InitAll(object):
     """ Runs analysis of previous grid search / integration results, used in an
         analyze-only mode """
 
-    from prime.iota.iota_analysis import Analyzer
+    from iota.components.iota_analysis import Analyzer
     from libtbx import easy_pickle as ep
 
     if os.path.isdir(analysis_source):
@@ -268,9 +268,9 @@ class InitAll(object):
 
     # Identify indexing / integration program
     if self.params.advanced.integrate_with == 'cctbx':
-      prg = "                                                          with CCTBX.XFEL\n"
+      prg = "                                                             with CCTBX.XFEL\n"
     elif self.params.advanced.integrate_with == 'dials':
-      prg = "                                                               with DIALS\n"
+      prg = "                                                                  with DIALS\n"
 
     self.logo += prg
     print self.logo
