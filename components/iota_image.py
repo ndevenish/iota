@@ -3,7 +3,7 @@ from __future__ import division
 """
 Author      : Lyubimov, A.Y.
 Created     : 10/10/2014
-Last Changed: 05/02/2016
+Last Changed: 06/01/2016
 Description : Creates image object. If necessary, converts raw image to pickle
               files; crops or pads pickle to place beam center into center of
               image; masks out beam stop. (Adapted in part from
@@ -301,6 +301,7 @@ class SingleImage(object):
                                 "sg": "",
                                 "strong": 0,
                                 "res": 0,
+                                "lres": 0,
                                 "mos": 0,
                                 "epv": 0,
                                 "info": "",
@@ -322,6 +323,7 @@ class SingleImage(object):
             "sg": "",
             "strong": 0,
             "res": 0,
+            "lres": 0,
             "mos": 0,
             "epv": 0,
             "info": "",
@@ -588,6 +590,7 @@ class SingleImage(object):
                 "sg": "",
                 "strong": 0,
                 "res": 0,
+                "lres": 0,
                 "mos": 0,
                 "epv": 0,
                 "info": "",
