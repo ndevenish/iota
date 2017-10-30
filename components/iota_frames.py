@@ -25,6 +25,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from libtbx import easy_run
 from libtbx import easy_pickle as ep
 from libtbx.utils import to_unicode
 from cctbx import miller
@@ -1081,7 +1082,7 @@ class ProcessingTab(wx.Panel):
                             cells.append(
                                 beam["observations"][0].unit_cell().parameters()
                             )
-                        except IOError, e:
+                        except Exception, e:
                             pass
 
                 # Calculate beam center coordinates and distances
@@ -1170,9 +1171,9 @@ class ProcessingTab(wx.Panel):
 
     def onImageView(self, e):
         filepath = self.info_txt.GetValue()
-        backend = self.gparams.advanced.integrate_with
+        viewer = self.gparams.advanced.image_viewer
         if os.path.isfile(filepath):
-            viewer = thr.ImageViewerThread(self, backend=backend, file_string=filepath)
+            viewer = thr.ImageViewerThread(self, viewer=viewer, file_string=filepath)
             viewer.start()
 
     def onArrow(self, e):
@@ -1555,6 +1556,7 @@ class ProcWindow(wx.Frame):
         self.state = "process"
         self.recovery = False
 
+        self.abort_initiated = False
         self.monitor_mode = False
         self.monitor_mode_timeout = None
         self.timeout_start = None
@@ -1676,8 +1678,12 @@ class ProcWindow(wx.Frame):
         self.Refresh()
 
     def onAbort(self, e):
+        if self.gparams.mp_method == "lsf":
+            kill_command = "bkill -J {}".format(self.job_id)
+            easy_run.fully_buffered(kill_command)
         with open(self.tmp_abort_file, "w") as af:
             af.write("")
+        self.abort_initiated = True
         self.status_txt.SetForegroundColour("red")
         self.status_txt.SetLabel("Aborting...")
         self.proc_toolbar.EnableTool(self.tb_btn_abort.GetId(), False)
@@ -1690,9 +1696,11 @@ class ProcWindow(wx.Frame):
     any images that may have been added during the abort pause) and runs
     processing """
 
-        # Remove abort signal file
+        # Remove abort signal file(s)
         if os.path.isfile(self.tmp_abort_file):
             os.remove(self.tmp_abort_file)
+        if os.path.isfile(self.tmp_aborted_file):
+            os.remove(self.tmp_aborted_file)
 
         # Re-generate new image info to include un-processed images
         input_entries = [i for i in self.gparams.input if i != None]
@@ -1725,6 +1733,7 @@ class ProcWindow(wx.Frame):
         self.init = init
         self.gparams = params
         self.tmp_abort_file = os.path.join(int_path, ".abort.tmp")
+        self.tmp_aborted_file = os.path.join(int_path, ".aborted.tmp")
         self.img_list = [
             [i, len(self.init.input_list) + 1, j]
             for i, j in enumerate(self.init.input_list, 1)
@@ -1758,6 +1767,7 @@ class ProcWindow(wx.Frame):
         # Start process
         if good_init:
             self.tmp_abort_file = os.path.join(self.init.int_base, ".abort.tmp")
+            self.tmp_aborted_file = os.path.join(self.init.int_base, ".aborted.tmp")
             self.status_txt.SetForegroundColour("black")
             self.status_txt.SetLabel("Running...")
             self.process_images()
@@ -1834,14 +1844,70 @@ class ProcWindow(wx.Frame):
                     "Processing {} images..." "".format(len(self.img_list))
                 )
         self.gauge_process.SetRange(len(self.img_list))
-        self.img_process = thr.ProcThread(
-            self,
-            init=self.init,
-            iterable=iterable,
-            input_type=type,
-            term_file=self.tmp_abort_file,
-        )
-        self.img_process.start()
+
+        if self.gparams.mp_method == "multiprocessing":
+            self.img_process = thr.ProcThread(
+                self,
+                init=self.init,
+                iterable=iterable,
+                input_type=type,
+                term_file=self.tmp_abort_file,
+            )
+            self.img_process.start()
+        else:
+            self.img_process = None
+            self.job_id = None
+            queue = self.gparams.mp_queue
+            iter_path = os.path.join(self.init.int_base, "iter.cfg")
+            init_path = os.path.join(self.init.int_base, "init.cfg")
+            nproc = self.init.params.n_processors
+            ep.dump(iter_path, iterable)
+            ep.dump(init_path, self.init)
+
+            if self.init.params.mp_method == "lsf":
+                logfile = os.path.join(self.init.int_base, "bsub.log")
+                pid = os.getpid()
+                try:
+                    user = os.getlogin()
+                except OSError:
+                    user = "iota"
+                self.job_id = "J_{}{}".format(user[0], pid)
+                command = (
+                    "bsub -o {} -q {} -n {} -J {} "
+                    "iota.process {} --files {} --type {} --stopfile {}"
+                    "".format(
+                        logfile,
+                        queue,
+                        nproc,
+                        self.job_id,
+                        init_path,
+                        iter_path,
+                        type,
+                        self.tmp_abort_file,
+                    )
+                )
+            elif self.init.params.mp_method == "torq":
+                params = "{} --files {} --type {} --stopfile {}" "".format(
+                    init_path, iter_path, type, self.tmp_abort_file
+                )
+                command = (
+                    'qsub -e /dev/null -o /dev/null -d {} iota.process -F "{}"'
+                    "".format(self.init.params.output, params)
+                )
+            else:
+                command = None
+            if command is not None:
+                try:
+                    print command
+                    easy_run.fully_buffered(
+                        command, join_stdout_stderr=True
+                    ).show_stdout()
+                    print "JOB NAME = ", self.job_id
+                except thr.IOTATermination, e:
+                    print e
+            else:
+                print "IOTA ERROR: COMMAND NOT ISSUED!"
+                return
 
     def analyze_results(self):
         if len(self.final_objects) == 0:
@@ -2015,8 +2081,18 @@ class ProcWindow(wx.Frame):
         self.chart_tab.draw_summary()
 
     def onTimer(self, e):
-        if self.img_process.aborted:
-            self.finish_process()
+        if self.abort_initiated:
+            if self.img_process is not None:
+                self.run_aborted = self.img_process.aborted
+            elif self.gparams.mp_method == "lsf":
+                info_command = "bjobs -J {}".format(self.job_id)
+                lsf_info = easy_run.fully_buffered(info_command).stdout_lines
+                self.run_aborted = lsf_info == []
+            else:
+                self.run_aborted = os.path.isfile(self.tmp_aborted_file)
+
+            if self.run_aborted:
+                self.finish_process()
 
         # Find processed image objects
         if self.start_object_finder:
@@ -2117,6 +2193,7 @@ class ProcWindow(wx.Frame):
         import shutil
 
         self.timer.Stop()
+
         if str(self.state).lower() in ("finished", "aborted", "unknown"):
             self.gauge_process.Hide()
             font = self.sb.GetFont()
@@ -2138,7 +2215,7 @@ class ProcWindow(wx.Frame):
                 if os.path.isfile(os.path.join(self.init.int_base, "init.cfg")):
                     self.proc_toolbar.EnableTool(self.tb_btn_resume.GetId(), True)
             return
-        elif self.img_process.aborted:
+        elif self.run_aborted:
             self.gauge_process.Hide()
             font = self.sb.GetFont()
             font.SetWeight(wx.BOLD)
@@ -2150,6 +2227,7 @@ class ProcWindow(wx.Frame):
                 shutil.rmtree(self.init.tmp_base)
             except Exception:
                 pass
+            print "JOB TERMINATED!"
             return
         else:
             self.final_objects = [i for i in self.finished_objects if i.fail == None]
