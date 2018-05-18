@@ -1495,7 +1495,6 @@ class ProcessingTab(ScrolledPanel):
             self.dblclick = False
 
     def on_button_release(self, event):
-        self.ReleaseMouse()
         if event.button == 1 and self.dblclick:
             self.show_image_group(e=event)
             self.view_proc_images()
