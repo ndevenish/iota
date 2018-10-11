@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 # LIBTBX_SET_DISPATCHER_NAME iota.run
 
@@ -206,7 +206,7 @@ class XTermIOTA:
         if len(final_objects) > 0:
             self.run_analysis()
         else:
-            print "No images successfully integrated!"
+            print("No images successfully integrated!")
 
         # Exit IOTA
         misc.iota_exit()
@@ -255,7 +255,7 @@ class XTermIOTA:
         if len(final_objects) > 0:
             self.run_analysis()
         else:
-            print "No images successfully integrated!"
+            print("No images successfully integrated!")
 
         # Exit IOTA
         misc.iota_exit()
