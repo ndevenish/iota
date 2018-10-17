@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 """
 Author      : Lyubimov, A.Y.
 Created     : 01/17/2017
-Last Changed: 08/29/2018
+Last Changed: 10/16/2018
 Description : IOTA GUI Dialogs
 """
 
@@ -17,7 +17,7 @@ from iotbx import phil as ip
 
 import iota.components.iota_controls as ct
 from iota.components.iota_input import master_phil
-from iota.components.iota_misc import UnicodeCharacters, WxFlags, noneset
+from iota.components.iota_utils import UnicodeCharacters, WxFlags, noneset
 
 
 # Platform-specific stuff
@@ -194,11 +194,7 @@ class BaseBackendDialog(BaseDialog):
         from iota.components.iota_input import write_defaults
 
         default_phil, _ = write_defaults(
-            current_path=None,
-            txt_out=None,
-            method=method,
-            write_target_file=False,
-            write_param_file=False,
+            method=method, write_target_file=False, write_param_file=False
         )
         self.target_phil = "\n".join(default_phil)
 
@@ -277,7 +273,6 @@ class IOTAPreferences(BaseDialog):
             items=[("cqueue", "")],
             label="Custom Queue:",
             label_size=(120, -1),
-            label_style="normal",
             ctrl_size=(150, -1),
         )
         queue_sizer.Add(
@@ -315,7 +310,6 @@ class IOTAPreferences(BaseDialog):
             items=[("timeout", "")],
             label="Timeout (sec):",
             label_size=(120, -1),
-            label_style="normal",
             ctrl_size=(150, -1),
         )
         self.chk_mm_timeout.Disable()
@@ -330,7 +324,6 @@ class IOTAPreferences(BaseDialog):
             items=[("range", "")],
             label_size=wx.DefaultSize,
             checkbox=True,
-            checkbox_state=False,
             checkbox_label="Image Range: ",
             ctrl_size=(200, -1),
         )
@@ -338,13 +331,10 @@ class IOTAPreferences(BaseDialog):
 
         self.chk_random_sample = ct.SpinCtrl(
             self,
-            label_size=wx.DefaultSize,
             checkbox=True,
-            checkbox_state=False,
             checkbox_label="Random subset: ",
             ctrl_value=100,
             ctrl_size=(80, -1),
-            ctrl_min=0,
             ctrl_max=5000,
         )
         adv_sizer.Add(self.chk_random_sample, flag=f.stack, border=10)
@@ -430,7 +420,7 @@ class IOTAPreferences(BaseDialog):
 
         # Set subset values
         if self.random_subset:
-            self.chk_random_sample.toggle_boxes(flag_on=True)
+            self.chk_random_sample.toggle_boxes()
             self.chk_random_sample.ctr.SetValue(self.random_subset_number)
 
         if self.image_range:
@@ -918,17 +908,7 @@ class CCTBXOptions(BaseBackendDialog):
         self.splitter.SplitVertically(self.options, self.phil_panel)
 
         # Target file input
-        self.phil = ct.PHILBox(
-            self.phil_panel,
-            btn_import=True,
-            btn_import_label="Import PHIL",
-            btn_export=False,
-            btn_default=True,
-            btn_default_label="Default PHIL",
-            btn_pos="bottom",
-            ctr_size=(-1, 300),
-            ctr_value="",
-        )
+        self.phil = ct.PHILBox(self.phil_panel, btn_pos="bottom", ctr_size=(-1, 300))
         self.phil_sizer.Add(self.phil, 1, flag=wx.EXPAND | wx.ALL, border=5)
 
         # Grid search options
@@ -1162,7 +1142,7 @@ class CCTBXOptions(BaseBackendDialog):
     def onAdvanced(self, e):
         mode = self.dlg_ctr.choice.GetSelection()
         if mode == 0:
-            self.show_hide_advanced(show=False)
+            self.show_hide_advanced()
         else:
             self.show_hide_advanced(show=True)
 
@@ -1528,17 +1508,7 @@ class DIALSOptions(BaseBackendDialog):
         self.splitter.SplitVertically(self.options, self.phil_panel)
 
         # Target file input
-        self.phil = ct.PHILBox(
-            self.phil_panel,
-            btn_import=True,
-            btn_import_label="Import PHIL",
-            btn_export=False,
-            btn_default=True,
-            btn_default_label="Default PHIL",
-            btn_pos="bottom",
-            ctr_size=(-1, 300),
-            ctr_value="",
-        )
+        self.phil = ct.PHILBox(self.phil_panel, btn_pos="bottom", ctr_size=(-1, 300))
         self.phil_sizer.Add(self.phil, 1, flag=wx.EXPAND | wx.ALL, border=5)
 
         # Target parameters
@@ -1679,7 +1649,7 @@ class DIALSOptions(BaseBackendDialog):
         self.options_sizer.Add(self.filt_options, flag=wx.ALL | wx.EXPAND, border=10)
 
         self.show_hide_script()
-        self.show_hide_advanced(show=False)
+        self.show_hide_advanced()
         self.Layout()
         self.options.SetupScrolling()
         self.read_param_phil()
@@ -1694,7 +1664,7 @@ class DIALSOptions(BaseBackendDialog):
     def onAdvanced(self, e):
         mode = self.dlg_ctr.choice.GetSelection()
         if mode == 0:
-            self.show_hide_advanced(show=False)
+            self.show_hide_advanced()
         else:
             self.show_hide_advanced(show=True)
 
@@ -1982,7 +1952,7 @@ class AnalysisWindow(BaseDialog):
         """ Read in parameters from IOTA parameter PHIL"""
 
         if self.params.analysis.run_clustering:
-            self.clustering.toggle_boxes(flag_on=True)
+            self.clustering.toggle_boxes()
             self.clustering.threshold.SetValue(
                 str(self.params.analysis.cluster_threshold)
             )
@@ -2370,7 +2340,7 @@ class RecoveryDialog(BaseDialog):
 
     def onOK(self, e):
         for i in range(self.pathlist.GetItemCount()):
-            if self.pathlist.IsSelected(i):
+            if self.pathlist.IsSelected(idx=i):
 
                 self.selected = [
                     self.pathlist.GetItemText(i, col=2),
@@ -2594,8 +2564,6 @@ class ClusterDialog(BaseDialog):
 
         self.cluster_n_images = ct.SpinCtrl(
             self.cluster_options,
-            label_size=wx.DefaultSize,
-            checkbox_state=False,
             checkbox_label="No. images",
             checkbox=True,
             ctrl_size=(100, -1),
@@ -2606,7 +2574,6 @@ class ClusterDialog(BaseDialog):
         self.cluster_threshold = ct.SpinCtrl(
             self.cluster_options,
             label="Threshold: ",
-            label_size=wx.DefaultSize,
             ctrl_size=(100, -1),
             ctrl_value=5000,
         )
@@ -2615,7 +2582,6 @@ class ClusterDialog(BaseDialog):
         self.cluster_limit = ct.SpinCtrl(
             self.cluster_options,
             label="Minimum cluster size: ",
-            label_size=wx.DefaultSize,
             ctrl_size=(100, -1),
             ctrl_value=10,
         )

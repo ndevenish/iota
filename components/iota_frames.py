@@ -1,10 +1,11 @@
 from __future__ import division, print_function, absolute_import
+
 from past.builtins import range
 
 """
 Author      : Lyubimov, A.Y.
 Created     : 01/17/2017
-Last Changed: 08/31/2018
+Last Changed: 10/16/2018
 Description : IOTA GUI Windows / frames
 """
 
@@ -24,7 +25,7 @@ import multiprocessing
 
 import matplotlib.gridspec as gridspec
 from matplotlib import pyplot as plt
-from matplotlib import colorbar, colors
+from matplotlib import colors
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.patches as mpatches
@@ -43,9 +44,8 @@ from prime.postrefine.mod_mx import mx_handler
 import prime.postrefine.mod_threads as pthr
 import prime.postrefine.mod_plotter as ppl
 
-from iota.components.iota_utils import InputFinder
+from iota.components.iota_utils import InputFinder, WxFlags, noneset
 from iota.components.iota_analysis import Analyzer, Plotter
-from iota.components.iota_misc import WxFlags, noneset
 import iota.components.iota_controls as ct
 import iota.components.iota_threads as thr
 import iota.components.iota_dialogs as dlg
@@ -131,7 +131,7 @@ class InputWindow(BasePanel):
         )
 
         self.project_title = ct.InputCtrl(
-            self, label="Description", label_size=(150, -1), label_style="normal"
+            self, label="Description", label_size=(150, -1)
         )
 
         # List control to add / manage input items
@@ -410,7 +410,7 @@ class FileListCtrl(ct.CustomListCtrl):
                     "Unknown file format", "Warning", wx.OK | wx.ICON_EXCLAMATION
                 )
         elif os.path.isdir(path):
-            file_list, _ = ginp.get_input(path, filter=True)
+            file_list, _ = ginp.get_input(path)
             self.view_images(file_list, img_type=type)
 
     def view_images(self, img_list, img_type=None):
@@ -734,7 +734,6 @@ class ProcessingTab(ScrolledPanel):
             self.hkl_panel,
             items=[("sg", "P1")],
             checkbox=True,
-            checkbox_state=False,
             checkbox_label="Space Group: ",
             label_size=wx.DefaultSize,
             ctrl_size=wx.DefaultSize,
@@ -801,6 +800,7 @@ class ProcessingTab(ScrolledPanel):
         self.draw_plots()
 
     def draw_summary(self):
+        # noinspection PyListCreation
         try:
             # Summary horizontal stack bar graph
             categories = [
@@ -877,7 +877,7 @@ class ProcessingTab(ScrolledPanel):
                         [
                             i
                             for i in self.finished_objects
-                            if i.fail == None and i.final["final"] != None
+                            if i.fail is None and i.final["final"] is not None
                         ]
                     ),
                 ],
@@ -948,9 +948,7 @@ class ProcessingTab(ScrolledPanel):
             if self.pick["picked"] and self.pick["axis"] == "summary":
                 idx = self.pick["index"]
                 p_idx = [
-                    patches.index(i)
-                    for i in patches
-                    if idx >= i[0][0] and idx <= i[0][1]
+                    patches.index(i) for i in patches if i[0][0] <= idx <= i[0][1]
                 ][0]
                 cat = names[p_idx]
                 if self.gparams.advanced.integrate_with == "cctbx":
@@ -967,13 +965,13 @@ class ProcessingTab(ScrolledPanel):
                     self.proc_fnames = [
                         i.conv_img
                         for i in self.finished_objects
-                        if i.fail == None and i.final["final"] != None
+                        if i.fail is None and i.final["final"] is not None
                     ]
                 elif cat == "not processed":
                     self.proc_fnames = [
                         i.conv_img
                         for i in self.finished_objects
-                        if i.fail == None and i.final["final"] == None
+                        if i.fail is None and i.final["final"] is None
                     ]
                 else:
                     self.proc_fnames = ""
@@ -1023,7 +1021,6 @@ class ProcessingTab(ScrolledPanel):
                 color="#ca0020",
                 picker=True,
             )
-
             nsref_median = np.median([i for i in self.nref_list if i > 0])
             nsref_med = self.nsref_axes.axhline(nsref_median, c="#ca0020", ls="--")
 
@@ -1060,8 +1057,12 @@ class ProcessingTab(ScrolledPanel):
                 color="#0571b0",
                 picker=True,
             )
-            res_median = np.median([i for i in self.res_list if i > 0])
-            res_med = self.res_axes.axhline(res_median, c="#0571b0", ls="--")
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                res_median = np.median([i for i in self.res_list if i > 0])
+                res_med = self.res_axes.axhline(res_median, c="#0571b0", ls="--")
 
             self.res_axes.set_xlim(0, np.nanmax(self.res_x) + 2)
             res_ymax = np.nanmax(self.res_y) * 1.1
@@ -1134,7 +1135,7 @@ class ProcessingTab(ScrolledPanel):
         if self.idx_array is None:
             self.idx_array = flex.miller_index(self.indices)
         else:
-            if self.indices != []:
+            if self.indices:
                 self.idx_array.extend(flex.miller_index(self.indices))
         self.indices = []
 
@@ -1226,7 +1227,6 @@ class ProcessingTab(ScrolledPanel):
                 norm=norm,
                 orientation="vertical",
                 aspect=40,
-                use_gridspec=True,
             )
 
     def onImageView(self, e):
@@ -1514,7 +1514,7 @@ class LiveAnalysisTab(ScrolledPanel):
             finished = [
                 i
                 for i in self.finished_objects
-                if i.fail == None and i.final["final"] != None
+                if i.fail is None and i.final["final"] is not None
             ]
             if len(finished) > 0:
                 self.a_axes.clear()
@@ -1531,20 +1531,18 @@ class LiveAnalysisTab(ScrolledPanel):
                 beta = [i.final["beta"] for i in finished]
                 gamma = [i.final["gamma"] for i in finished]
 
-                self.calculate_uc_histogram(
-                    a, self.a_axes, xticks_loc="top", set_ylim=True
-                )
+                self.calculate_uc_histogram(a, self.a_axes, set_ylim=True)
                 # self.a_axes.hist(a, 50, normed=False, facecolor='#4575b4',
                 #                 histtype='stepfilled')
                 edge_ylabel = "a, b, c ({})".format(r"$\AA$")
                 self.a_axes.set_ylabel(edge_ylabel)
 
-                self.calculate_uc_histogram(b, self.b_axes, xticks_loc="top")
+                self.calculate_uc_histogram(b, self.b_axes)
                 # self.b_axes.hist(b, 50, normed=False, facecolor='#4575b4',
                 #                 histtype='stepfilled')
                 plt.setp(self.b_axes.get_yticklabels(), visible=False)
 
-                self.calculate_uc_histogram(c, self.c_axes, xticks_loc="top")
+                self.calculate_uc_histogram(c, self.c_axes)
                 # self.c_axes.hist(a, 50, normed=False, facecolor='#4575b4',
                 #                 histtype='stepfilled')
                 plt.setp(self.c_axes.get_yticklabels(), visible=False)
@@ -1905,7 +1903,7 @@ class SummaryTab(ScrolledPanel):
                 init=self.init, all_objects=self.final_objects, gui_mode=True
             )
             clusters = analysis.unit_cell_analysis()
-            if clusters != []:
+            if clusters:
                 self.report_clustering_results(clusters=clusters)
 
     def report_clustering_results(self, clusters):
@@ -1923,19 +1921,19 @@ class SummaryTab(ScrolledPanel):
         self.SetupScrolling()
 
     def onPlotHeatmap(self, e):
-        if self.final_objects != None:
+        if self.final_objects is not None:
             self.plot.plot_spotfinding_heatmap()
 
     def onPlotBeamXY(self, e):
-        if self.final_objects != None:
+        if self.final_objects is not None:
             self.plot.plot_beam_xy()
 
     def onPlotBeam3D(self, e):
-        if self.final_objects != None:
+        if self.final_objects is not None:
             self.plot.plot_beam_xy(threeD=True)
 
     def onPlotResHist(self, e):
-        if self.final_objects != None:
+        if self.final_objects is not None:
             self.plot.plot_res_histogram()
 
 
@@ -2142,7 +2140,7 @@ class tmpProcWindow(wx.Frame):
         self.run_aborted = False
 
         # Re-generate new image info to include un-processed images
-        input_entries = [i for i in self.gparams.input if i != None]
+        input_entries = [i for i in self.gparams.input if i is not None]
         ext_file_list = ginp.make_input_list(
             input_entries, filter=True, filter_type="image"
         )
@@ -2419,10 +2417,10 @@ class tmpProcWindow(wx.Frame):
                     pg = clusters[0]["pg"]
                     uc = clusters[0]["uc"]
 
-                if clusters != []:
+                if clusters:
                     self.summary_tab.report_clustering_results(clusters=clusters)
 
-                if pg != None:
+                if pg is not None:
                     self.summary_tab.pg_txt.SetLabel(str(pg))
                 if uc is not None:
                     if type(uc) is str:
@@ -2571,7 +2569,7 @@ class tmpProcWindow(wx.Frame):
             self.proc_toolbar.EnableTool(self.tb_btn_resume.GetId(), True)
             print("JOB TERMINATED!")
         else:
-            self.final_objects = [i for i in self.finished_objects if i.fail == None]
+            self.final_objects = [i for i in self.finished_objects if i.fail is None]
             self.gauge_process.Hide()
             self.proc_toolbar.EnableTool(self.tb_btn_abort.GetId(), False)
             self.proc_toolbar.EnableTool(self.tb_btn_monitor.GetId(), False)
@@ -2615,6 +2613,7 @@ class ProcWindow(wx.Frame):
             style=wx.SYSTEM_MENU | wx.CAPTION | wx.CLOSE_BOX | wx.RESIZE_BORDER,
         )
 
+        self.parent = parent
         self.logtext = ""
         self.obj_counter = 0
         self.bookmark = 0
@@ -2755,6 +2754,30 @@ class ProcWindow(wx.Frame):
                         self.gparams.advanced.monitor_mode_timeout_length
                     )
 
+    def set_position(self):
+        """ Determines screen position w/ respect to parent window; will also
+    detect if it goes beyond the display edge, and adjust """
+
+        # Position proc window w/ respect to IOTA window
+        mx, my = self.parent.GetPosition()
+        px = mx + 50
+        py = my + 50
+
+        # Calculate if proc window is going out of bounds, and adjust
+        disp_idx = wx.Display.GetFromWindow(window=self.parent)
+        disp_geom = wx.Display(disp_idx).GetClientArea()
+        dxmin = disp_geom[0]
+        dxmax = disp_geom[0] + disp_geom[2]
+        dymin = disp_geom[1]
+        dymax = disp_geom[1] + disp_geom[3]
+
+        pw, pl = self.GetSize()
+        if not (px + pw * 1.1 in range(dxmin, dxmax)):
+            px = dxmax - pw * 1.1
+        if not (py + pl * 1.1 in range(dymin, dymax)):
+            py = dymax - pl * 1.1
+        self.SetPosition((px, py))
+
     def onTabChange(self, e):
         """ Only update displays if user changes to the tab """
         # tab = self.proc_nb.GetSelection()
@@ -2838,7 +2861,7 @@ class ProcWindow(wx.Frame):
         self.run_aborted = False
 
         # Re-generate new image info to include un-processed images
-        input_entries = [i for i in self.gparams.input if i != None]
+        input_entries = [i for i in self.gparams.input if i is not None]
         ext_file_list = ginp.make_input_list(
             input_entries, filter=True, filter_type="image"
         )
@@ -3146,10 +3169,10 @@ class ProcWindow(wx.Frame):
                     pg = clusters[0]["pg"]
                     uc = clusters[0]["uc"]
 
-                if clusters != []:
+                if clusters:
                     self.summary_tab.report_clustering_results(clusters=clusters)
 
-                if pg != None:
+                if pg is not None:
                     self.summary_tab.pg_txt.SetLabel(str(pg))
                 if uc is not None:
                     if type(uc) is str:
@@ -3352,7 +3375,7 @@ class ProcWindow(wx.Frame):
         self.populate_data_points(objects=new_finished_objects)
 
         if str(self.state).lower() in ("finished", "aborted", "unknown"):
-            if self.finished_objects != []:
+            if self.finished_objects:
                 self.finish_process()
             else:
                 return
@@ -3478,9 +3501,7 @@ class ProcWindow(wx.Frame):
                     best_uc = cl_sorted[0]["uc"]
 
                     analyzer = Analyzer(
-                        init=self.init,
-                        all_objects=self.finished_objects,
-                        gui_mode=False,
+                        init=self.init, all_objects=self.finished_objects
                     )
                     analyzer.prime_data_path = final_list_file
 
@@ -3587,7 +3608,7 @@ class ProcWindow(wx.Frame):
                 for i in os.listdir(stats_folder)
                 if i.endswith("stat")
             ]
-            if stat_files != []:
+            if stat_files:
                 assert len(stat_files) == 1
                 stat_file = stat_files[0]
                 if os.path.isfile(stat_file):
@@ -3635,7 +3656,7 @@ class ProcWindow(wx.Frame):
             img_with_diffraction = [
                 i
                 for i in self.finished_objects
-                if i.status == "imported" and i.fail == None
+                if i.status == "imported" and i.fail is None
             ]
             self.sb.SetStatusText(
                 "{} of {} images imported, {} have diffraction"
@@ -3647,7 +3668,7 @@ class ProcWindow(wx.Frame):
                 1,
             )
         else:
-            processed_images = [i for i in self.finished_objects if i.fail == None]
+            processed_images = [i for i in self.finished_objects if i.fail is None]
             self.sb.SetStatusText(
                 "{} of {} images processed, {} successfully integrated"
                 "".format(self.obj_counter, len(self.img_list), len(processed_images)),
@@ -3673,7 +3694,7 @@ class ProcWindow(wx.Frame):
                     self.state = "new images"
                     self.process_images()
                 else:
-                    if self.monitor_mode_timeout != None:
+                    if self.monitor_mode_timeout is not None:
                         if self.timeout_start is None:
                             self.timeout_start = time.time()
                         else:
@@ -3739,7 +3760,7 @@ class ProcWindow(wx.Frame):
             else:
                 analysis = None
 
-            if self.finished_objects == []:
+            if not self.finished_objects:
                 # Get image processing data from finished objects
                 if analysis is not None and hasattr(analysis, "image_objects"):
                     self.finished_objects = [
@@ -3808,7 +3829,7 @@ class ProcWindow(wx.Frame):
             print("JOB TERMINATED!")
             return
         else:
-            self.final_objects = [i for i in self.finished_objects if i.fail == None]
+            self.final_objects = [i for i in self.finished_objects if i.fail is None]
             self.gauge_process.Hide()
             self.proc_toolbar.EnableTool(self.tb_btn_abort.GetId(), False)
             self.proc_toolbar.EnableTool(self.tb_btn_monitor.GetId(), False)
