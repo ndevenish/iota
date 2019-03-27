@@ -1743,6 +1743,14 @@ class BackendOptions(BaseBackendDialog):
         self.auto_threshold.SetValue(True)
         optz_box_sizer.Add(self.auto_threshold, flag=wx.ALL, border=10)
 
+        self.refined_geometry = ct.InputCtrl(
+            self.opt_options,
+            label="Refined Geometry: ",
+            label_size=(150, -1),
+            buttons=True,
+        )
+        optz_box_sizer.Add(self.refined_geometry, flag=wx.ALL | wx.EXPAND, border=10)
+
         # Filters
         self.filt_options = wx.Panel(self.options)
         filter_box = wx.StaticBox(self.filt_options, label="Filters")
@@ -1832,6 +1840,9 @@ class BackendOptions(BaseBackendDialog):
         self.read_param_phil()
 
         # Button bindings
+        self.Bind(
+            wx.EVT_BUTTON, self.onGeometryBrowse, self.refined_geometry.btn_browse
+        )
         self.Bind(wx.EVT_BUTTON, self.onImportPHIL, self.phil.btn_import)
         self.Bind(wx.EVT_BUTTON, self.onDefaultPHIL, self.phil.btn_default)
         self.Bind(wx.EVT_BUTTON, self.onOK, id=wx.ID_OK)
@@ -1909,6 +1920,7 @@ class BackendOptions(BaseBackendDialog):
         # Optimization options
         self.reindex.SetValue(self.params.cctbx_xfel.determine_sg_and_reindex)
         self.auto_threshold.SetValue(self.params.cctbx_xfel.auto_threshold)
+        self.refined_geometry.ctr.SetValue(str(self.params.advanced.reference_geometry))
 
         # Selection filters
         try:
@@ -1949,6 +1961,19 @@ class BackendOptions(BaseBackendDialog):
                     self.filt_ref.ref.SetValue(str(rf))
         except AttributeError:
             pass
+
+    def onGeometryBrowse(self, e):
+        dlg = wx.FileDialog(
+            self,
+            message="Select geometry file (JSON)",
+            defaultDir=os.curdir,
+            defaultFile="*.json",
+            wildcard="*.json",
+            style=wx.FD_OPEN | wx.FD_CHANGE_DIR,
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            filepath = dlg.GetPaths()[0]
+            self.refined_geometry.ctr.SetValue(filepath)
 
     def onOK(self, e):
         """ Populate param PHIL file for DIALS options """
@@ -2023,6 +2048,9 @@ class BackendOptions(BaseBackendDialog):
         else:
             res = None
 
+        # Reference geometry
+        ref_g = noneset(str(self.refined_geometry.ctr.GetValue()))
+
         dials_phil_text = "\n".join(
             [
                 "cctbx_xfel",
@@ -2047,6 +2075,10 @@ class BackendOptions(BaseBackendDialog):
                 "      min_reflections = {}".format(ref),
                 "      min_resolution = {}".format(res),
                 "    }",
+                "}",
+                "advanced",
+                "{",
+                "  reference_geometry = {}".format(ref_g),
                 "}",
             ]
         )
