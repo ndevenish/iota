@@ -2574,7 +2574,6 @@ class RecoveryDialog(IOTABaseDialog):
         bmps.Add(aborted_bmp)
         bmps.Add(unknown_bmp)
         self.pathlist.AssignImageList(bmps, which=1)
-
         self.main_sizer.Add(self.pathlist, 1, flag=wx.EXPAND | wx.ALL, border=10)
 
         # Dialog control
@@ -2589,7 +2588,8 @@ class RecoveryDialog(IOTABaseDialog):
         )
 
         # Bindings
-        self.Bind(wx.EVT_BUTTON, self.onOK, id=-1)
+        self.Bind(wx.EVT_BUTTON, self.onOK, self.dlg_ctr.btn_ok)
+        self.Bind(wx.EVT_BUTTON, self.onCancel, self.dlg_ctr.btn_cancel)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onItemActivated, id=-1)
 
         self.place_and_size(set_by="parent", set_size="dialog")
@@ -2639,6 +2639,9 @@ class RecoveryDialog(IOTABaseDialog):
             self.EndModal(wx.ID_CANCEL)
 
         e.Skip()
+
+    def onCancel(self, e):
+        self.EndModal(wx.ID_CANCEL)
 
     def onItemActivated(self, e):
         idx = e.GetIndex()
