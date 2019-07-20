@@ -351,10 +351,13 @@ class PHILIndex(interface.index):
             if reindex:
                 self.reindex_to_unique_paths()
 
-    def get_value(self, path):
+    def get_value(self, path, default=False):
         # fixme: multiple values don't work: defs from multiple scopes only found
         # once!
-        dfn = self.get_scope_by_name(scope_name=path)
+        if default:
+            dfn = self.get_master_scope(path=path)
+        else:
+            dfn = self.get_scope_by_name(scope_name=path)
         if isinstance(dfn, list):  # is multiple!
             value = [d.type.from_words(d.words, d) for d in dfn]
         else:
@@ -464,19 +467,6 @@ class IOTAPHILCtrl(object):
         self.is_dlg_button = False
 
         self.is_primary_parent = phil_object.primary_parent_scope is None
-        if self.is_definition:
-            value = phil_object.type.from_words(phil_object.words, phil_object)
-            self.default_value = self.ReformatValue(value, raise_error=False)
-
-        # Some scopes or definitions may be explicitly set as optional
-        if phil_object.optional is not None:
-            self.SetOptional(optional=phil_object.optional)
-        else:
-            if self.is_definition:
-                self.SetOptional(optional=(self.default_value is None))
-                self.SetUseAuto(enable=(self.default_value is Auto))
-            else:
-                self.SetOptional(optional=False)
 
         # Set expert level
         self.expert_level = phil_object.expert_level
@@ -531,12 +521,13 @@ class IOTAPHILCtrl(object):
             else:
                 return None
         elif str(value).lower() == "none":
-            if self.IsOptional():
-                return None
-            else:
-                if raise_error:
-                    raise Sorry("Value required for {}.".format(self.GetPHILName()))
-                return None
+            if raise_error:
+                if self.IsOptional():
+                    return None
+                else:
+                    if raise_error:
+                        raise Sorry("Value required for {}.".format(self.GetPHILName()))
+                    return None
         else:
             return value
 
@@ -569,7 +560,16 @@ class IOTADefinitionCtrl(IOTAPHILCtrl):
         if isinstance(phil_object, list):
             phil_object = phil_object[0]
         assert phil_object.is_definition
+        self.optional = phil_object.optional
+        self.default_value = getattr(self, "default_value", None)
+        self.set_optional_and_auto()
         IOTAPHILCtrl.__init__(self, phil_object=phil_object)
+
+    def set_optional_and_auto(self):
+        # Some scopes or definitions may be explicitly set as optional
+        if self.optional is None:
+            self.SetOptional(optional=(self.default_value is None))
+            self.SetUseAuto(enable=(self.default_value is Auto))
 
     def GetPHIL(self, full_path=False, indent_length=2):
         """ Get PHIL entry for this control
