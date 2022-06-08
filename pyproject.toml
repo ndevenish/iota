@@ -1,3 +1,60 @@
+[project]
+name = "iota"
+version = "1.5.4"
+description = "IOTA: Integration Optimization, Triage and Analysis"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+authors = [
+    { name = "Leland Stanford Junior University", email = "scientificsoftware@diamond.ac.uk" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "six",
+    "wxpython",
+]
+[project.urls]
+Repository = "https://github.com/ssrl-px/iota"
+
+[project.gui-scripts]
+"iota" = "iota.command_line.iota_gui_launch:entry_point"
+
+[project.scripts]
+"iota.filter_pickles" = "iota.command_line.iota_filter_pickles:entry_point"
+"iota.run" = "iota.command_line.iota_run:entry_point"
+"iota.single_image" = "iota.command_line.iota_single_image:entry_point"
+"iota.track_images" = "iota.command_line.iota_track_images:entry_point"
+
+[project.entry-points."libtbx.dispatcher.script"]
+"iota" = "iota"
+"iota.filter_pickles" = "iota.filter_pickles"
+"iota.run" = "iota.run"
+"iota.single_image" = "iota.single_image"
+"iota.track_images" = "iota.track_images"
+
+[project.entry-points."libtbx.precommit"]
+"iota" = "iota"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# tests_require=["mock", "procrunner", "pytest"],
+
 [tool.black]
 include='\.pyi?$|/SConscript$|/libtbx_config$'
 
+[build-system]
+requires = ["setuptools>61.0.0"]
+build-backend = "setuptools.build_meta"
