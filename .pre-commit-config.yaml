@@ -8,3 +8,5 @@ repos:
     args: [--safe, --quiet]
     files: \.pyi?$|SConscript$|^libtbx_config$
     types: [file]
+    additional_dependencies: ['click==8.0.4']
+
