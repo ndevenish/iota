@@ -1,6 +1,9 @@
+[tool.setuptools.dynamic]
+version = {attr = "iota.iota_version"}
+
 [project]
+dynamic = ["version"]
 name = "iota"
-version = "1.5.4"
 description = "IOTA: Integration Optimization, Triage and Analysis"
 readme = "README.md"
 license = {text = "BSD-3-Clause"}
